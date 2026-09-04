@@ -3,7 +3,7 @@ package main
 import (
 	"sync/atomic"
 
-	"github.com/frapaparatto/http-server-go/internal/database"
+	"github.com/frapaparatto/chirpy/internal/database"
 )
 
 type Config struct {

@@ -7,7 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/frapaparatto/http-server-go/internal/database"
+	"github.com/frapaparatto/chirpy/internal/database"
+	_ "github.com/lib/pq"
 )
 
 func main() {
