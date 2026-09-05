@@ -43,7 +43,8 @@ func main() {
 
 	// API handler
 	mux.HandleFunc("GET /api/healthz", healthHandler)
-	mux.HandleFunc("POST /api/validate_chirp", validationHandler)
+	mux.HandleFunc("GET /api/chirps", cfg.handleChirpList)
+	mux.HandleFunc("POST /api/chirps", cfg.handleChirpCreation)
 	mux.HandleFunc("POST /api/users", cfg.handleUserCreation)
 
 	// Admin handlers
