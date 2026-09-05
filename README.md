@@ -15,15 +15,16 @@ Implemented:
 - Static file server for the frontend, mounted at `/app/`
 - `GET /api/healthz`, a health check
 - `GET /api/chirps`, `GET /api/chirps/{chirpID}`, `POST /api/chirps`: list, fetch, and create chirps, with a 140-character limit and profanity filtering
-- `POST /api/users`: create a user
+- `POST /api/users`: create a user with an Argon2id-hashed password
+- `POST /api/login`: verify an email/password pair and return the user
 - `GET /admin/metrics` and `POST /admin/reset`: view and reset file-server hit counts; reset also clears the users table and only works when `PLATFORM=dev`
 
-Not implemented yet: authentication, updating or deleting chirps, and the remaining course chapters.
+Not implemented yet: token-based authentication, authorization, updating or deleting chirps, and the remaining course chapters.
 
 Known gaps, not yet addressed:
 
 - No automated tests
-- No auth: any request can create a chirp under any `user_id`
+- Login does not issue a token or establish a session, so protected routes and ownership checks do not exist; any request can still create a chirp under any `user_id`
 - The database connection is opened but never pinged or closed, and the server exits via `log.Fatal` rather than shutting down cleanly
 - Request bodies aren't size-limited
 
@@ -31,7 +32,8 @@ Known gaps, not yet addressed:
 
 - `main.go`: composition root that loads env, opens the DB, builds the mux, and starts the server.
 - `config.go`: `Config`, the state shared across handlers (db handle, hit counter, platform).
-- `health.go`, `users.go`, `chirps.go`, `metrics.go`, `reset.go`: one file per handler group.
+- `health.go`, `users.go`, `login.go`, `chirps.go`, `metrics.go`, `reset.go`: one file per handler group.
+- `internal/auth`: password hashing and verification using Argon2id.
 - `json.go`: `respondWithJSON` / `respondWithError`, the only place handlers write a response.
 - `internal/database`: sqlc-generated query code. Regenerate with `sqlc generate`; never hand-edit.
 - `sql/schema`, `sql/queries`: goose migrations and the queries sqlc compiles them from.
@@ -71,7 +73,8 @@ The server listens on port 8080.
 | GET    | `/api/chirps`           | List chirps, oldest first                             |
 | GET    | `/api/chirps/{chirpID}` | Fetch one chirp by UUID, 404 if missing                |
 | POST   | `/api/chirps`           | Create a chirp; 140-char limit, filters 3 known words  |
-| POST   | `/api/users`            | Create a user                                          |
+| POST   | `/api/users`            | Create a user; stores an Argon2id-hashed password      |
+| POST   | `/api/login`            | Verify email and password; returns the user on success |
 | GET    | `/admin/metrics`        | HTML page with the file-server hit count               |
 | POST   | `/admin/reset`          | Dev only: clears users, resets hit count               |
 
