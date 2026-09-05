@@ -8,44 +8,47 @@ import (
 	"time"
 
 	"github.com/frapaparatto/chirpy/internal/database"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
 func main() {
-	dbURL := os.Getenv("DB_URL")
+	godotenv.Load()
 	const rootDir = "./app/"
 	const port = "8080"
 
-	db, err := sql.Open("postgres", dbURL)
-	if err != nil {
-		// do something
-		return
+	dbURL := os.Getenv("DB_URL")
+	ptf := os.Getenv("PLATFORM")
+	if dbURL == "" {
+		log.Fatal("DB_URL must be set")
 	}
 
-	queries := database.New(db)
+	dbConn, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatalf("Error opening database: %s", err)
+	}
+
+	dbQueries := database.New(dbConn)
 
 	cfg := &Config{
-		dbQueries: queries,
+		db:       dbQueries,
+		platform: ptf,
 	}
 
 	mux := http.NewServeMux()
-
-	var m http.Handler = http.HandlerFunc(cfg.metricsHandler)
-	var r http.Handler = http.HandlerFunc(cfg.resetMetrics)
-	var v http.Handler = http.HandlerFunc(validationHandler)
-	var h http.Handler = http.HandlerFunc(healthHandler)
 
 	// FileServer Handler
 	f := http.StripPrefix("/app", http.FileServer(http.Dir(rootDir)))
 	mux.Handle("/app/", cfg.middlewareMetricsInc(f))
 
 	// API handler
-	mux.Handle("GET /api/healthz", h)
-	mux.Handle("POST /api/validate_chirp", v)
+	mux.HandleFunc("GET /api/healthz", healthHandler)
+	mux.HandleFunc("POST /api/validate_chirp", validationHandler)
+	mux.HandleFunc("POST /api/users", cfg.handleUserCreation)
 
 	// Admin handlers
-	mux.Handle("GET /admin/metrics", m)
-	mux.Handle("POST /admin/reset", r)
+	mux.HandleFunc("GET /admin/metrics", cfg.metricsHandler)
+	mux.HandleFunc("POST /admin/reset", cfg.resetHandler)
 
 	s := &http.Server{
 		Addr:         ":" + port,

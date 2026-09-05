@@ -8,5 +8,6 @@ import (
 
 type Config struct {
 	fileserverHits atomic.Int32
-	dbQueries      *database.Queries
+	db             *database.Queries
+	platform       string
 }

@@ -12,13 +12,6 @@ func (cfg *Config) middlewareMetricsInc(next http.Handler) http.Handler {
 	})
 }
 
-func (cfg *Config) resetMetrics(w http.ResponseWriter, r *http.Request) {
-	cfg.fileserverHits.Store(0)
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8") // normal header
-	t := fmt.Sprintf("Hits: %d", cfg.fileserverHits.Load())
-	w.Write([]byte(t))
-}
-
 func (cfg *Config) metricsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8") // normal header
 	t := fmt.Sprintf(`<html>

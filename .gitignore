@@ -1,3 +1,4 @@
 .env
 *.swp
 /chirpy
+GO_USAGE_REPORT.md
