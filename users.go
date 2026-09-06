@@ -2,12 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/frapaparatto/chirpy/internal/auth"
 	"github.com/frapaparatto/chirpy/internal/database"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 // That is needed for marshaling the json for the response
@@ -18,7 +20,7 @@ type User struct {
 	Email     string    `json:"email"`
 }
 
-func (cfg *Config) handleUserCreation(w http.ResponseWriter, r *http.Request) {
+func (cfg *Config) handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	type UserData struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -28,23 +30,28 @@ func (cfg *Config) handleUserCreation(w http.ResponseWriter, r *http.Request) {
 
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&usr); err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
+		writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 
 	hashed_password, err := auth.HashPassword(usr.Password)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failed to create user", err)
+		writeErrorResponse(w, http.StatusInternalServerError, "Failed to create user", err)
 		return
 	}
 
 	user, err := cfg.db.CreateUser(r.Context(), database.CreateUserParams{Email: usr.Email, HashedPassword: hashed_password})
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failed to create user", err)
+		var pgErr *pq.Error
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			writeErrorResponse(w, http.StatusConflict, "Email already exists", nil)
+			return
+		}
+		writeErrorResponse(w, http.StatusInternalServerError, "Failed to create user", err)
 		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, User{
+	writeJSONResponse(w, http.StatusCreated, User{
 		ID:        user.ID,
 		CreatedAt: user.CreatedAt,
 		UpdatedAt: user.UpdatedAt,

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -19,7 +20,7 @@ type Chirp struct {
 	UserID    uuid.UUID `json:"user_id"`
 }
 
-func (cfg *Config) handleChirpCreation(w http.ResponseWriter, r *http.Request) {
+func (cfg *Config) handleCreateChirp(w http.ResponseWriter, r *http.Request) {
 	type ChirpData struct {
 		Body   string    `json:"body"`
 		UserID uuid.UUID `json:"user_id"`
@@ -28,17 +29,18 @@ func (cfg *Config) handleChirpCreation(w http.ResponseWriter, r *http.Request) {
 	chirpReq := ChirpData{}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&chirpReq); err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
+		writeErrorResponse(w, http.StatusBadRequest, "Invalid request body", err)
 		return
 	}
 	if chirpReq.UserID == uuid.Nil {
-		respondWithError(w, http.StatusBadRequest, "user_id is required", nil)
+		writeErrorResponse(w, http.StatusBadRequest, "user_id is required", nil)
 		return
 	}
 
-	cleanedBody, err := validateChirp(chirpReq.Body)
+	cleanedBody, err := cleanChirpBody(chirpReq.Body)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid request body", err)
+		writeErrorResponse(w, http.StatusBadRequest, "Chirp too long", err)
+		return
 	}
 
 	chirp, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
@@ -47,11 +49,11 @@ func (cfg *Config) handleChirpCreation(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failed to create chirp", err)
+		writeErrorResponse(w, http.StatusInternalServerError, "Failed to create chirp", err)
 		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, Chirp{
+	writeJSONResponse(w, http.StatusCreated, Chirp{
 		ID:        chirp.ID,
 		CreatedAt: chirp.CreatedAt,
 		UpdatedAt: chirp.UpdatedAt,
@@ -60,7 +62,7 @@ func (cfg *Config) handleChirpCreation(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func validateChirp(body string) (string, error) {
+func cleanChirpBody(body string) (string, error) {
 	var cleaned []string
 	const subWord = "****"
 
@@ -81,10 +83,10 @@ func validateChirp(body string) (string, error) {
 	return respString, nil
 }
 
-func (cfg *Config) handleChirpList(w http.ResponseWriter, r *http.Request) {
+func (cfg *Config) handleListChirps(w http.ResponseWriter, r *http.Request) {
 	chirps, err := cfg.db.ListChirps(r.Context())
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failed to retrieve chirps", nil)
+		writeErrorResponse(w, http.StatusInternalServerError, "Could not list chirps", err)
 		return
 	}
 
@@ -99,24 +101,28 @@ func (cfg *Config) handleChirpList(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	respondWithJSON(w, http.StatusOK, responseChirps)
+	writeJSONResponse(w, http.StatusOK, responseChirps)
 }
 
 func (cfg *Config) handleGetChirp(w http.ResponseWriter, r *http.Request) {
 	chirpID := r.PathValue("chirpID")
 	parsedID, err := uuid.Parse(chirpID)
 	if err != nil {
-		respondWithError(w, http.StatusBadRequest, "Invalid UUID", nil)
+		writeErrorResponse(w, http.StatusBadRequest, "Invalid chirp ID", err)
 		return
 	}
 
 	chirp, err := cfg.db.GetChirp(r.Context(), parsedID)
 	if err != nil {
-		respondWithError(w, http.StatusNotFound, "Chirp not found", nil)
+		if errors.Is(err, sql.ErrNoRows) {
+			writeErrorResponse(w, http.StatusNotFound, "Chirp not found", nil)
+			return
+		}
+		writeErrorResponse(w, http.StatusInternalServerError, "Could not get chirp", err)
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, Chirp{
+	writeJSONResponse(w, http.StatusOK, Chirp{
 		ID:        chirp.ID,
 		CreatedAt: chirp.CreatedAt,
 		UpdatedAt: chirp.UpdatedAt,

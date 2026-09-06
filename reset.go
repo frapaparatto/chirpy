@@ -5,15 +5,15 @@ import (
 	"net/http"
 )
 
-func (cfg *Config) resetHandler(w http.ResponseWriter, r *http.Request) {
+func (cfg *Config) handleReset(w http.ResponseWriter, r *http.Request) {
 
 	if cfg.platform != "dev" {
-		respondWithError(w, http.StatusForbidden, "Forbidden operation", nil)
+		writeErrorResponse(w, http.StatusForbidden, "Forbidden", nil)
 		return
 	}
 
 	if err := cfg.db.ResetUsers(r.Context()); err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Something went wrong", nil)
+		writeErrorResponse(w, http.StatusInternalServerError, "Could not reset", err)
 		return
 	}
 
