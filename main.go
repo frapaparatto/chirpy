@@ -19,6 +19,7 @@ func main() {
 
 	dbURL := os.Getenv("DB_URL")
 	ptf := os.Getenv("PLATFORM")
+	secretKey := os.Getenv("JWT_TOKEN")
 	if dbURL == "" {
 		log.Fatal("DB_URL must be set")
 	}
@@ -31,8 +32,9 @@ func main() {
 	dbQueries := database.New(dbConn)
 
 	cfg := &Config{
-		db:       dbQueries,
-		platform: ptf,
+		db:        dbQueries,
+		platform:  ptf,
+		secretKey: secretKey,
 	}
 
 	mux := http.NewServeMux()

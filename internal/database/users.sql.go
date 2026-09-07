@@ -7,6 +7,8 @@ package database
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -45,6 +47,24 @@ WHERE email = $1
 
 func (q *Queries) GetByEmail(ctx context.Context, email string) (User, error) {
 	row := q.db.QueryRowContext(ctx, getByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Email,
+		&i.HashedPassword,
+	)
+	return i, err
+}
+
+const getByUUID = `-- name: GetByUUID :one
+SELECT id, created_at, updated_at, email, hashed_password from users
+WHERE id == $1
+`
+
+func (q *Queries) GetByUUID(ctx context.Context, id uuid.UUID) (User, error) {
+	row := q.db.QueryRowContext(ctx, getByUUID, id)
 	var i User
 	err := row.Scan(
 		&i.ID,

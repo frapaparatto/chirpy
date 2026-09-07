@@ -12,5 +12,9 @@ VALUES (
 SELECT * FROM users
 WHERE email = $1;
 
+-- name: GetByUUID :one
+SELECT * from users
+WHERE id == $1;
+
 -- name: ResetUsers :exec
 DELETE FROM users;

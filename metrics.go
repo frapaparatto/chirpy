@@ -16,7 +16,7 @@ func (cfg *Config) handleMetrics(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8") // normal header
 	t := fmt.Sprintf(`<html>
   <body>
-    <h1>Welcome, Chirpy Admin</h1>
+    <h1>Chirpy Admin</h1>
     <p>Chirpy has been visited %d times!</p>
   </body>
 </html>`, cfg.fileserverHits.Load())
