@@ -11,4 +11,5 @@ type Config struct {
 	db             *database.Queries
 	platform       string
 	secretKey      string
+	apiKey         string
 }

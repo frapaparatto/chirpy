@@ -22,6 +22,7 @@ func main() {
 	dbURL := os.Getenv("DB_URL")
 	ptf := os.Getenv("PLATFORM")
 	secretKey := os.Getenv("JWT_TOKEN")
+	apiKey := os.Getenv("API_KEY")
 	if dbURL == "" {
 		log.Fatal("DB_URL must be set")
 	}
@@ -37,6 +38,7 @@ func main() {
 		db:        dbQueries,
 		platform:  ptf,
 		secretKey: secretKey,
+		apiKey:    apiKey,
 	}
 
 	mux := http.NewServeMux()
@@ -56,6 +58,7 @@ func main() {
 	mux.HandleFunc("POST /api/login", cfg.handleLogin)
 	mux.HandleFunc("POST /api/refresh", cfg.handleRefresh)
 	mux.HandleFunc("POST /api/revoke", cfg.handlerRevoke)
+	mux.HandleFunc("POST /api/polka/webhooks", cfg.handleWebhook)
 
 	// Admin handlers
 	mux.HandleFunc("GET /admin/metrics", cfg.handleMetrics)
