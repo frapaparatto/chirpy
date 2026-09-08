@@ -30,5 +30,5 @@ func writeJSONResponse(w http.ResponseWriter, code int, payload any) {
 		return
 	}
 	w.WriteHeader(code)
-	w.Write(data)
+	_, _ = w.Write(data)
 }

@@ -20,6 +20,6 @@ func (cfg *Config) handleReset(w http.ResponseWriter, r *http.Request) {
 	cfg.fileserverHits.Store(0)
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8") // normal header
 	t := fmt.Sprintf("Hits: %d", cfg.fileserverHits.Load())
-	w.Write([]byte(t))
+	_, _ = w.Write([]byte(t))
 
 }

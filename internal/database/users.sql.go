@@ -60,7 +60,7 @@ func (q *Queries) GetByEmail(ctx context.Context, email string) (User, error) {
 
 const getByUUID = `-- name: GetByUUID :one
 SELECT id, created_at, updated_at, email, hashed_password from users
-WHERE id == $1
+WHERE id = $1
 `
 
 func (q *Queries) GetByUUID(ctx context.Context, id uuid.UUID) (User, error) {
@@ -82,5 +82,22 @@ DELETE FROM users
 
 func (q *Queries) ResetUsers(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, resetUsers)
+	return err
+}
+
+const updateUser = `-- name: UpdateUser :exec
+UPDATE users
+SET email = $2, hashed_password = $3
+WHERE id = $1
+`
+
+type UpdateUserParams struct {
+	ID             uuid.UUID
+	Email          string
+	HashedPassword string
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
+	_, err := q.db.ExecContext(ctx, updateUser, arg.ID, arg.Email, arg.HashedPassword)
 	return err
 }

@@ -28,7 +28,7 @@ func (cfg *Config) handleCreateChirp(w http.ResponseWriter, r *http.Request) {
 
 	token, err := auth.GetBearerToken(r.Header)
 	if err != nil {
-		writeErrorResponse(w, http.StatusUnauthorized, "Somethign went wrong", err)
+		writeErrorResponse(w, http.StatusUnauthorized, "Unauthorized user", err)
 		return
 	}
 
@@ -75,7 +75,7 @@ func cleanChirpBody(body string) (string, error) {
 	const subWord = "****"
 
 	if len(body) > 140 {
-		return "", errors.New("Too long chirp")
+		return "", errors.New("too long chirp")
 	}
 
 	for word := range strings.SplitSeq(body, " ") {
@@ -137,5 +137,43 @@ func (cfg *Config) handleGetChirp(w http.ResponseWriter, r *http.Request) {
 		Body:      chirp.Body,
 		UserID:    chirp.UserID,
 	})
+}
+
+func (cfg *Config) handleDeleteChirp(w http.ResponseWriter, r *http.Request) {
+	chirpIDString := r.PathValue("chirpID")
+	chirpID, err := uuid.Parse(chirpIDString)
+	if err != nil {
+		writeErrorResponse(w, http.StatusBadRequest, "Invalid chirp ID", err)
+		return
+	}
+
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		writeErrorResponse(w, http.StatusUnauthorized, "Couldn't find JWT", err)
+		return
+	}
+	userID, err := auth.ValidateJWT(token, cfg.secretKey)
+	if err != nil {
+		writeErrorResponse(w, http.StatusUnauthorized, "Couldn't validate JWT", err)
+		return
+	}
+
+	dbChirp, err := cfg.db.GetChirp(r.Context(), chirpID)
+	if err != nil {
+		writeErrorResponse(w, http.StatusNotFound, "Couldn't get chirp", err)
+		return
+	}
+	if dbChirp.UserID != userID {
+		writeErrorResponse(w, http.StatusForbidden, "You can't delete this chirp", err)
+		return
+	}
+
+	err = cfg.db.DeleteChirp(r.Context(), chirpID)
+	if err != nil {
+		writeErrorResponse(w, http.StatusInternalServerError, "Couldn't delete chirp", err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 
 }

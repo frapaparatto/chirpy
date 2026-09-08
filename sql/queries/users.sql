@@ -14,7 +14,12 @@ WHERE email = $1;
 
 -- name: GetByUUID :one
 SELECT * from users
-WHERE id == $1;
+WHERE id = $1;
 
 -- name: ResetUsers :exec
 DELETE FROM users;
+
+-- name: UpdateUser :exec
+UPDATE users
+SET email = $2, hashed_password = $3
+WHERE id = $1;

@@ -61,19 +61,20 @@ func GetBearerToken(headers http.Header) (string, error) {
 
 	token := headers.Get("Authorization")
 	if token == "" {
-		return "", errors.New("No token were provided")
+		return "", errors.New("no token were provided")
 	}
 
 	if !strings.HasPrefix(token, prefix) {
-		return "", errors.New("Authorization header must use Bearer scheme")
+		return "", errors.New("authorization header must use Bearer scheme")
 	}
 
 	return strings.TrimSpace(strings.TrimPrefix(token, prefix)), nil
 }
 
-func MakeRefreshToken() string {
+func MakeRefreshToken() (string, error) {
 	key := make([]byte, 32)
-	rand.Read(key)
-
-	return hex.EncodeToString(key)
+	if _, err := rand.Read(key); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(key), nil
 }

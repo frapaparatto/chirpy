@@ -20,5 +20,5 @@ func (cfg *Config) handleMetrics(w http.ResponseWriter, r *http.Request) {
     <p>Chirpy has been visited %d times!</p>
   </body>
 </html>`, cfg.fileserverHits.Load())
-	w.Write([]byte(t))
+	_, _ = w.Write([]byte(t))
 }

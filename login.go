@@ -51,7 +51,11 @@ func (cfg *Config) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	refreshToken := auth.MakeRefreshToken()
+	refreshToken, err := auth.MakeRefreshToken()
+	if err != nil {
+		writeErrorResponse(w, http.StatusInternalServerError, "Failed to generate refresh token", err)
+		return
+	}
 	_, err = cfg.db.CreateRefreshToken(r.Context(), database.CreateRefreshTokenParams{
 		Token:     refreshToken,
 		UserID:    user.ID,
