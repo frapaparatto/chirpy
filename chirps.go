@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -92,10 +93,44 @@ func cleanChirpBody(body string) (string, error) {
 }
 
 func (cfg *Config) handleListChirps(w http.ResponseWriter, r *http.Request) {
-	chirps, err := cfg.db.ListChirps(r.Context())
-	if err != nil {
-		writeErrorResponse(w, http.StatusInternalServerError, "Could not list chirps", err)
+
+	author_id := r.URL.Query().Get("author_id")
+
+	sortDirection := r.URL.Query().Get("sort")
+	if sortDirection == "" {
+		sortDirection = "asc"
+	}
+	if sortDirection != "asc" && sortDirection != "desc" {
+		writeErrorResponse(w, http.StatusBadRequest, "Invalid sort direction", nil)
 		return
+	}
+
+	var chirps []database.Chirp
+	var err error
+
+	if author_id == "" {
+		chirps, err = cfg.db.ListChirps(r.Context())
+		if err != nil {
+			writeErrorResponse(w, http.StatusInternalServerError, "Could not list chirps", err)
+			return
+		}
+	} else {
+		parsedID, parseErr := uuid.Parse(author_id)
+		if parseErr != nil {
+			writeErrorResponse(w, http.StatusBadRequest, "Invalid author id", parseErr)
+			return
+		}
+		chirps, err = cfg.db.ListUserChirps(r.Context(), parsedID)
+		if err != nil {
+			writeErrorResponse(w, http.StatusInternalServerError, "Could not list chirps", err)
+			return
+		}
+	}
+
+	if sortDirection == "desc" {
+		sort.Slice(chirps, func(i, j int) bool {
+			return chirps[i].CreatedAt.After(chirps[j].CreatedAt)
+		})
 	}
 
 	responseChirps := make([]Chirp, len(chirps))
